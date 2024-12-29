@@ -1,5 +1,5 @@
 FROM docker.io/tsl0922/ttyd:latest
-LABEL maintainer="r0binak"
+LABEL maintainer="steer09"
 
 EXPOSE 7681
 
@@ -30,7 +30,6 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
 COPY ./install.sh /usr/local/bin/install.sh
 RUN chmod +x /usr/local/bin/install.sh && /usr/local/bin/install.sh && rm -f /usr/local/bin/install.sh
 
-COPY ./recon.py /usr/local/bin/recon.py
 COPY ./access_kubelet_api.py /usr/local/bin/access_kubelet_api.py
 COPY ./access_kubernetes_api.py /usr/local/bin/access_kubernetes_api.py
 COPY ./network_mapping.py /usr/local/bin/network_mapping.py
@@ -40,7 +39,7 @@ COPY ./peirates_attacks.py /usr/local/bin/peirates_attacks.py
 COPY ./combined_recon.py /usr/local/bin/combined_recon.py
 
 # Устанавливаем права на выполнение для всех скриптов
-RUN chmod +x /usr/local/bin/recon.py /usr/local/bin/access_kubelet_api.py /usr/local/bin/access_kubernetes_api.py /usr/local/bin/network_mapping.py /usr/local/bin/credintial_access.py /usr/local/bin/kube_bench_scan.py /usr/local/bin/peirates_attacks.py /usr/local/bin/combined_recon.py 
+RUN chmod +x /usr/local/bin/access_kubelet_api.py /usr/local/bin/access_kubernetes_api.py /usr/local/bin/network_mapping.py /usr/local/bin/credintial_access.py /usr/local/bin/kube_bench_scan.py /usr/local/bin/peirates_attacks.py /usr/local/bin/combined_recon.py 
 
 # Указываем рабочую директорию
 WORKDIR /usr/local/bin

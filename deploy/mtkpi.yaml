@@ -9,7 +9,7 @@ spec:
   serviceAccountName: pentest-sa  # Указываем созданный сервисный аккаунт
   containers:
   - name: mtkpi-container
-    image: r0binak/mtkpi:v1.5
+    image: steer09/mtkpi:v1.5
     ports:
     - containerPort: 7681
     resources:  # Ресурсы контейнера
