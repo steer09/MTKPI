@@ -70,36 +70,22 @@ def evaluate_network_mapping():
     print("[+] Evaluating network mapping results...")
     results = []
 
-    # Проверка данных о подах, сервисах и политиках
     for resource in ["pods_info", "services_info", "networkpolicies_info"]:
         file_path = os.path.join(LOG_DIR, f"{resource}.log")
         if os.path.exists(file_path):
             with open(file_path, "r") as f:
                 data = f.read()
             if "Error" not in data:
-                results.append(f"[+] {resource.replace('_', ' ').capitalize()} retrieved successfully.")
+                results.append(f"[PASS] {resource.replace('_', ' ').capitalize()} retrieved successfully.")
+                write_to_log(os.path.join(LOG_DIR, "attack_log.log"), f"[PASS] {resource.replace('_', ' ').capitalize()} retrieved successfully.")
+            else:
+                write_to_log(os.path.join(LOG_DIR, "attack_log.log"), f"[FAIL] {resource.replace('_', ' ').capitalize()} retrieval failed.")
 
-    ping_sweep_file = os.path.join(LOG_DIR, "ping_sweep_ips.log")
-    ports_file = os.path.join(LOG_DIR, "open_ports.log")
-    if os.path.exists(ping_sweep_file):
-        with open(ping_sweep_file, "r") as f:
-            active_ips = f.read().strip().split("\n")
-        results.append(f"[+] Active IPs from Deepce: {', '.join(active_ips)}")
-    if os.path.exists(ports_file):
-        with open(ports_file, "r") as f:
-            open_ports = f.read().strip().split("\n")
-        results.append(f"[+] Open ports from Deepce: {', '.join(open_ports)}")
-
-    final_log = os.path.join(LOG_DIR, "network_mapping_results.log")
-    with open(final_log, "w") as f:
-        f.write("\n".join(results))
-    print("[+] Network mapping evaluation completed. Results saved to network_mapping_results.log.")
 
 def strict_network_mapping():
     print("[+] Starting strict network mapping reconnaissance...")
     kubectl_network_mapping()
 
-    # Сканируем узлы, найденные через kubectl
     internal_ips = []
     try:
         kubectl_nodes_output = run_command("kubectl get nodes -o json")

@@ -3,6 +3,7 @@ import os
 import subprocess
 
 LOG_DIR = "/usr/local/bin/logs"
+FINAL_LOG = os.path.join(LOG_DIR, "final_report.txt")
 os.makedirs(LOG_DIR, exist_ok=True)
 
 RESOURCES = [
@@ -37,14 +38,23 @@ def check_kubernetes_api_access():
         write_to_log(log_filename, output)
 
         if "Forbidden" in output:
-            print(f"[-] Access to {resource} is forbidden.")
+            result = f"[FAIL] Access {resource}: Forbidden"
+            print(result)
             access_results[resource] = "Forbidden"
+            write_to_log(os.path.join(LOG_DIR, "attack_log.log"), result)
+            write_to_log(FINAL_LOG, result)
         elif "No resources found" in output:
-            print(f"[+] Access to {resource} is allowed but no resources found.")
+            result = f"[PASS] Access {resource}: Allowed (no resources)"
+            print(result)
             access_results[resource] = "Allowed (no resources)"
+            write_to_log(os.path.join(LOG_DIR, "attack_log.log"), result)
+            write_to_log(FINAL_LOG, result)
         else:
-            print(f"[+] Access to {resource} is allowed and resources are available.")
+            result = f"[PASS] Access {resource}: Resources available"
+            print(result)
             access_results[resource] = "Allowed (resources available)"
+            write_to_log(os.path.join(LOG_DIR, "attack_log.log"), result)
+            write_to_log(FINAL_LOG, result)
 
     return access_results
 
@@ -53,12 +63,16 @@ def evaluate_attack_applicability(access_results):
     write_to_log(os.path.join(LOG_DIR, "attack_evaluation.log"), "[+] Evaluating attack applicability...")
 
     if "Forbidden" not in access_results.values():
-        print("[+] Access Kubernetes API Server exploited. Attack vector successfully applicable.") 
-        write_to_log(os.path.join(LOG_DIR, "access_kubapi.log"), f"[MTKPI: Access Kubernetes API Exploited]")
+        result = "[PASS] Access Kubernetes API Server exploited. Attack vector successfully applicable."
+        print(result)
+        write_to_log(os.path.join(LOG_DIR, "access_kubapi.log"), result)
+        write_to_log(FINAL_LOG, result)
         return "Successfully exploited"
     else:
-        print("[-] Access to some resources is forbidden. Attack vector partially applicable.")
-        write_to_log(os.path.join(LOG_DIR, "attack_evaluation.log"), "Access to some resources is forbidden. Attack vector partially applicable.")
+        result = "[-] Access to some resources is forbidden. Attack vector partially applicable."
+        print(result)
+        write_to_log(os.path.join(LOG_DIR, "attack_evaluation.log"), result)
+        write_to_log(FINAL_LOG, result)
         return "Partially applicable"
 
 def strict_recon():
@@ -71,9 +85,13 @@ def strict_recon():
     attack_status = evaluate_attack_applicability(access_results)
     write_to_log(os.path.join(LOG_DIR, "attack_log.log"), f"Attack status: {attack_status}")
 
-    print("[+] Access Kubernetes  API phase completed.")
+    print("[+] Access Kubernetes API phase completed.")
     write_to_log(os.path.join(LOG_DIR, "attack_log.log"), "[+] Reconnaissance completed.")
 
 if __name__ == "__main__":
+    # Очистка финального лога перед началом
+    with open(FINAL_LOG, "w") as f:
+        f.write("Kubernetes API Server Assessment Results\n")
+        f.write("=" * 50 + "\n")
     strict_recon()
 

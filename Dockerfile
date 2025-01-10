@@ -37,9 +37,10 @@ COPY ./credintial_access.py /usr/local/bin/credintial_access.py
 COPY ./kube_bench_scan.py /usr/local/bin/kube_bench_scan.py
 COPY ./peirates_attacks.py /usr/local/bin/peirates_attacks.py
 COPY ./combined_recon.py /usr/local/bin/combined_recon.py
+COPY ./cdk_exploitation.py /usr/local/bin/cdk_exploitation.py
 
 # Устанавливаем права на выполнение для всех скриптов
-RUN chmod +x /usr/local/bin/access_kubelet_api.py /usr/local/bin/access_kubernetes_api.py /usr/local/bin/network_mapping.py /usr/local/bin/credintial_access.py /usr/local/bin/kube_bench_scan.py /usr/local/bin/peirates_attacks.py /usr/local/bin/combined_recon.py 
+RUN chmod +x /usr/local/bin/access_kubelet_api.py /usr/local/bin/access_kubernetes_api.py /usr/local/bin/network_mapping.py /usr/local/bin/credintial_access.py /usr/local/bin/kube_bench_scan.py /usr/local/bin/peirates_attacks.py /usr/local/bin/combined_recon.py /usr/local/bin/cdk_exploitation.py
 
 # Указываем рабочую директорию
 WORKDIR /usr/local/bin

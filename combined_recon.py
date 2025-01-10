@@ -53,6 +53,8 @@ scripts = [
     "access_kubelet_api.py",
     "access_kubernetes_api.py",
     "credintial_access.py",
+    "peirates_attacks.py",
+    "cdk_exploitation.py",
     "kube_bench_scan.py"
 ]
 
@@ -70,7 +72,6 @@ def evaluate_vulnerabilities():
     print("[+] Evaluating vulnerabilities...")
     found_vulnerabilities = {}
 
-    # Открываем логи и ищем маркеры
     log_files = [f for f in os.listdir(LOG_DIR) if f.endswith(".log")]
     for log_file in log_files:
         log_path = os.path.join(LOG_DIR, log_file)
@@ -80,10 +81,12 @@ def evaluate_vulnerabilities():
                 content = f.read()
                 for category, vectors in MITRE_MATRIX.items():
                     for vector, score in vectors.items():
-                        if vector in content:  # Проверяем наличие маркера
+                        if f"[PASS] {vector}" in content:  # Успешный маркер
                             if category not in found_vulnerabilities:
                                 found_vulnerabilities[category] = {}
                             found_vulnerabilities[category][vector] = score
+                        elif f"[FAIL] {vector}" in content:  # Неуспешный маркер
+                            print(f"[-] Found failed exploitation for vector: {vector}")
         except Exception as e:
             print(f"[-] Error reading log file {log_file}: {e}")
             continue
@@ -117,7 +120,7 @@ def generate_report(found_vulnerabilities):
     print(f"[+] Report saved to {report_path}")
 
 if __name__ == "__main__":
-    print("[+] Starting MITRE Techniques assessment...\n")
+    print("[+] Starting Microsoft Threat Matrix assessment...\n")
     for script in scripts:
         if os.path.exists(script):
             run_script(script)
@@ -128,5 +131,5 @@ if __name__ == "__main__":
     found_vulnerabilities = evaluate_vulnerabilities()
     generate_report(found_vulnerabilities)
     print("[+] Assessment completed.")
-    print("[+] Please, also check final report file for information about possible vulnerabilities and best practices by Kubernetes CIS Matrix")
+    print("[+] Please, also check final report files for information about possible vulnerabilities and best practices by Kubernetes CIS Matrix (kube-bench)")
 

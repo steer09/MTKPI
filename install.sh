@@ -5,6 +5,8 @@ set -e
 apt-get update && apt-get install -y python2
 ln -sf /usr/bin/python2 /usr/bin/python
 
+apt-get install -y netcat
+
 # Install botb
 curl -LO https://github.com/brompwnie/botb/releases/download/1.8.0/botb-linux-amd64 \
     && install botb-linux-amd64 /usr/local/bin/botb \
@@ -121,6 +123,8 @@ curl -LO https://github.com/nccgroup/kubetcd/releases/download/v1.28/kubetcd_lin
 curl -LO https://github.com/Esonhugh/k8spider/releases/download/v2.4.0/k8spider_v2.4.0_linux_amd64.tar.gz \
     && tar -xzvf k8spider_v2.4.0_linux_amd64.tar.gz && mv k8spider /usr/local/bin/ \
     && chmod +x /usr/local/bin/k8spider && rm -rf k8spider_v2.4.0_linux_amd64.tar.gz
+
+pip3 install pexpect
 
 # Clean up
 apt-get clean

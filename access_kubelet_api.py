@@ -24,13 +24,12 @@ def get_internal_ips_from_json():
 
     if "Forbidden" in output:
         print("[-] Access to nodes forbidden. Cannot retrieve InternalIP.")
-        write_to_log(os.path.join(LOG_DIR, "attack_log.log"), "Access to nodes forbidden. Cannot retrieve InternalIP.")
+        write_to_log(os.path.join(LOG_DIR, "attack_log.log"), "[FAIL] Fetching node information: Forbidden")
         return None
 
     write_to_log(os.path.join(LOG_DIR, "kubelet_nodes_raw.json"), output)
     print("[+] Nodes JSON information saved to kubelet_nodes_raw.json")
 
-    # Извлечение IP-адресов
     try:
         nodes_data = json.loads(output)
         internal_ips = []
@@ -40,18 +39,18 @@ def get_internal_ips_from_json():
                 if address.get("type") == "InternalIP":
                     ip = address.get("address")
                     internal_ips.append(ip)
-                    write_to_log(os.path.join(LOG_DIR, "attack_log.log"), f"Found Kubelet: {node_name} with IP {ip}")
-                    print(f"[+] Found InternalIP for node {node_name}: {ip}")
+                    write_to_log(os.path.join(LOG_DIR, "attack_log.log"), f"[PASS] Found Kubelet: {node_name} with IP {ip}")
+                    print(f"[PASS] Found InternalIP for node {node_name}: {ip}")
 
         if not internal_ips:
             print("[-] No InternalIP addresses found.")
-            write_to_log(os.path.join(LOG_DIR, "attack_log.log"), "No InternalIP addresses found.")
+            write_to_log(os.path.join(LOG_DIR, "attack_log.log"), "[FAIL] No InternalIP addresses found")
             return None
         print(f"[+] All InternalIP addresses: {internal_ips}")
         return internal_ips
     except json.JSONDecodeError as e:
         print(f"[-] Error parsing JSON: {e}")
-        write_to_log(os.path.join(LOG_DIR, "attack_log.log"), f"Error parsing JSON: {e}")
+        write_to_log(os.path.join(LOG_DIR, "attack_log.log"), f"[FAIL] Error parsing JSON: {e}")
         return None
 
 def access_kubelet_api(ip_addresses):
@@ -63,15 +62,15 @@ def access_kubelet_api(ip_addresses):
         output = run_command(command)
 
         if "Forbidden" in output:
-            print(f"[-] Access to Kubelet API at {ip} is forbidden.")
-            write_to_log(os.path.join(LOG_DIR, "attack_log.log"), f"Access to Kubelet API at {ip} is forbidden.")
+            print(f"[FAIL] Access Kubelet API at {ip}: Forbidden")
+            write_to_log(os.path.join(LOG_DIR, "attack_log.log"), f"[FAIL] Access Kubelet API at {ip}: Forbidden")
         elif output.strip():
-            print(f"[+] Successfully accessed Kubelet API at {ip}.")
-            write_to_log(os.path.join(LOG_DIR, "attack_log.log"), f"Successfully accessed Kubelet API at {ip}. Output saved.")
+            print(f"[PASS] Successfully accessed Kubelet API at {ip}")
+            write_to_log(os.path.join(LOG_DIR, "attack_log.log"), f"[PASS] Access Kubelet API at {ip}: Successful")
             write_to_log(os.path.join(LOG_DIR, f"kubelet_api_{ip}.log"), output)
         else:
-            print(f"[-] No response from Kubelet API at {ip}.")
-            write_to_log(os.path.join(LOG_DIR, "attack_log.log"), f"No response from Kubelet API at {ip}.")
+            print(f"[FAIL] Access Kubelet API at {ip}: No response")
+            write_to_log(os.path.join(LOG_DIR, "attack_log.log"), f"[FAIL] Access Kubelet API at {ip}: No response")
 
 def evaluate_attack_applicability(ip_addresses):
     print("[+] Evaluating attack applicability...")
@@ -85,14 +84,11 @@ def evaluate_attack_applicability(ip_addresses):
             break
 
     if success:
-        print("[+] Access Kubelet API exploited. Attack vector successfully applicable.")
-        write_to_log(os.path.join(LOG_DIR, "attack_log.log"), f"[MTKPI: Access Kubelet API Exploited]")
-        write_to_log(os.path.join(LOG_DIR, "attack_log.log"), f"Node IPs: {ip_addresses}") 
-        return "Successfully exploited"
+        print("[PASS] Access Kubelet API exploited. Attack vector successfully applicable.")
+        write_to_log(os.path.join(LOG_DIR, "attack_log.log"), "[PASS] Access Kubelet API exploited")
     else:
-        print("[-] Access to Kubelet API forbidden. Attack vector not applicable.")
-        write_to_log(os.path.join(LOG_DIR, "access_kubelet_log.log"), f"Access to Kubelet API forbidden. Node IPs: {ip_addresses}")
-        return "Not applicable"
+        print("[FAIL] Access to Kubelet API forbidden. Attack vector not applicable.")
+        write_to_log(os.path.join(LOG_DIR, "attack_log.log"), "[FAIL] Access to Kubelet API forbidden")
 
 def strict_recon():
     print("[+] Starting strict reconnaissance...")
